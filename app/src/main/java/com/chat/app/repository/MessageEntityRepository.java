@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.chat.app.model.MessageEntity;
 
+/**
+ * Data access operations for conversation messages.
+ */
 public interface MessageEntityRepository extends JpaRepository<MessageEntity, Long> {
     List<MessageEntity> findByConversationIdOrderBySentAtAsc(Long conversationId);
 

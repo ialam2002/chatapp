@@ -12,6 +12,9 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Maps users to conversations they participate in.
+ */
 @Getter
 @Setter
 @Entity

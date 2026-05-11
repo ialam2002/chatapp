@@ -12,6 +12,9 @@ import com.chat.app.dto.UserResponse;
 import com.chat.app.model.AppUser;
 import com.chat.app.service.ChatAppService;
 
+/**
+ * Handles basic sign-up and login operations.
+ */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -21,6 +24,12 @@ public class AuthController {
         this.chatAppService = chatAppService;
     }
 
+    /**
+     * Creates a new user account.
+     *
+     * @param request username and password payload
+     * @return created user summary
+     */
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse signup(@RequestBody AuthRequest request) {
@@ -28,6 +37,12 @@ public class AuthController {
         return new UserResponse(user.getId(), user.getUsername());
     }
 
+    /**
+     * Authenticates an existing user.
+     *
+     * @param request username and password payload
+     * @return authenticated user summary
+     */
     @PostMapping("/login")
     public UserResponse login(@RequestBody AuthRequest request) {
         AppUser user = chatAppService.login(request.username(), request.password());

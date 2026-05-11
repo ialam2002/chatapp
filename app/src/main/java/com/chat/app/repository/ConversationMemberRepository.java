@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.chat.app.model.ConversationMember;
 
+/**
+ * Data access operations for conversation membership records.
+ */
 public interface ConversationMemberRepository extends JpaRepository<ConversationMember, Long> {
     boolean existsByConversationIdAndUserId(Long conversationId, Long userId);
 

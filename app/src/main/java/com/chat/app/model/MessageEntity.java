@@ -13,6 +13,9 @@ import jakarta.persistence.ManyToOne;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Represents a persisted message within a conversation.
+ */
 @Getter
 @Setter
 @Entity

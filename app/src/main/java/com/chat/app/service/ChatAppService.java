@@ -26,6 +26,10 @@ import com.chat.app.repository.ConversationMemberRepository;
 import com.chat.app.repository.ConversationRepository;
 import com.chat.app.repository.MessageEntityRepository;
 
+/**
+ * Contains the main business logic for users, contacts, conversations,
+ * messages, and notifications.
+ */
 @Service
 @Transactional
 public class ChatAppService {
@@ -51,6 +55,13 @@ public class ChatAppService {
         this.appNotificationRepository = appNotificationRepository;
     }
 
+    /**
+     * Registers a new user after basic validation.
+     *
+     * @param username username to register
+     * @param password raw password
+     * @return persisted user
+     */
     public AppUser signup(String username, String password) {
         String normalized = username == null ? "" : username.trim();
         if (normalized.isEmpty() || password == null || password.isBlank()) {
@@ -66,6 +77,13 @@ public class ChatAppService {
         return appUserRepository.save(user);
     }
 
+    /**
+     * Authenticates a user by matching username and password.
+     *
+     * @param username username credential
+     * @param password password credential
+     * @return authenticated user
+     */
     public AppUser login(String username, String password) {
         AppUser user = appUserRepository.findByUsername(username == null ? "" : username.trim())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials."));
@@ -75,10 +93,21 @@ public class ChatAppService {
         return user;
     }
 
+    /**
+     * Lists all registered users.
+     *
+     * @return all users
+     */
     public List<AppUser> listUsers() {
         return appUserRepository.findAll();
     }
 
+    /**
+     * Creates an accepted contact relationship in both directions.
+     *
+     * @param ownerId owner user id
+     * @param contactUsername username to add as contact
+     */
     public void addContact(Long ownerId, String contactUsername) {
         AppUser owner = getUser(ownerId);
         AppUser contactUser = appUserRepository.findByUsername(contactUsername == null ? "" : contactUsername.trim())
@@ -105,6 +134,12 @@ public class ChatAppService {
         }
     }
 
+    /**
+     * Returns accepted contacts for a user.
+     *
+     * @param ownerId owner user id
+     * @return contact users
+     */
     public List<AppUser> listContacts(Long ownerId) {
         return contactRepository.findByOwnerIdAndStatus(ownerId, "ACCEPTED")
                 .stream()
@@ -112,6 +147,14 @@ public class ChatAppService {
                 .toList();
     }
 
+    /**
+     * Creates a conversation and adds creator plus selected members.
+     *
+     * @param creatorId user creating the conversation
+     * @param title conversation display title
+     * @param memberIds additional user ids to add
+     * @return persisted conversation
+     */
     public Conversation createConversation(Long creatorId, String title, List<Long> memberIds) {
         AppUser creator = getUser(creatorId);
 
@@ -137,6 +180,14 @@ public class ChatAppService {
         return conversation;
     }
 
+    /**
+     * Persists a message and generates notifications for other members.
+     *
+     * @param conversationId target conversation
+     * @param senderId sender user id
+     * @param content message text
+     * @return saved message projection
+     */
     public MessageResponse sendMessage(Long conversationId, Long senderId, String content) {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Message content cannot be empty.");
@@ -176,6 +227,13 @@ public class ChatAppService {
         return toMessageResponse(message);
     }
 
+    /**
+     * Loads message history for a conversation after membership validation.
+     *
+     * @param conversationId target conversation
+     * @param userId requesting user
+     * @return chronologically ordered messages
+     */
     public List<MessageResponse> getConversationMessages(Long conversationId, Long userId) {
         if (!conversationMemberRepository.existsByConversationIdAndUserId(conversationId, userId)) {
             throw new IllegalArgumentException("You are not part of this conversation.");
@@ -187,6 +245,13 @@ public class ChatAppService {
                 .toList();
     }
 
+    /**
+     * Returns chat summaries (last message, updated time, unread count)
+     * for all conversations of the given user.
+     *
+     * @param userId target user id
+     * @return recent chat summaries
+     */
     public List<ConversationSummaryResponse> getRecentChats(Long userId) {
         List<ConversationMember> memberships = conversationMemberRepository.findByUserId(userId);
         List<ConversationSummaryResponse> response = new ArrayList<>();
@@ -214,6 +279,12 @@ public class ChatAppService {
         return response;
     }
 
+    /**
+     * Returns all notifications for a user.
+     *
+     * @param userId target user id
+     * @return notification projections
+     */
     public List<NotificationResponse> getNotifications(Long userId) {
         return appNotificationRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
@@ -221,6 +292,12 @@ public class ChatAppService {
                 .toList();
     }
 
+    /**
+     * Marks a specific notification as read for the owner.
+     *
+     * @param notificationId notification id
+     * @param userId owner user id
+     */
     public void markNotificationAsRead(Long notificationId, Long userId) {
         AppNotification notification = appNotificationRepository.findById(notificationId)
                 .orElseThrow(() -> new NoSuchElementException("Notification not found."));

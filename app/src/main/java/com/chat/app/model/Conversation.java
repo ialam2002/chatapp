@@ -10,6 +10,9 @@ import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Represents a conversation thread between multiple users.
+ */
 @Getter
 @Setter
 @Entity

@@ -13,6 +13,9 @@ import com.chat.app.dto.ContactRequest;
 import com.chat.app.dto.UserResponse;
 import com.chat.app.service.ChatAppService;
 
+/**
+ * Provides contact-management and user listing endpoints.
+ */
 @RestController
 @RequestMapping("/api")
 public class SocialController {
@@ -22,11 +25,22 @@ public class SocialController {
         this.chatAppService = chatAppService;
     }
 
+    /**
+     * Adds a bidirectional accepted contact relation.
+     *
+     * @param request owner and contact username payload
+     */
     @PostMapping("/contacts/add")
     public void addContact(@RequestBody ContactRequest request) {
         chatAppService.addContact(request.ownerId(), request.contactUsername());
     }
 
+    /**
+     * Lists accepted contacts for a user.
+     *
+     * @param userId owner user id
+     * @return contact user summaries
+     */
     @GetMapping("/users/{userId}/contacts")
     public List<UserResponse> listContacts(@PathVariable Long userId) {
         return chatAppService.listContacts(userId)
@@ -35,6 +49,11 @@ public class SocialController {
                 .toList();
     }
 
+    /**
+     * Lists all users in the system.
+     *
+     * @return user summaries
+     */
     @GetMapping("/users")
     public List<UserResponse> listUsers() {
         return chatAppService.listUsers().stream().map(u -> new UserResponse(u.getId(), u.getUsername())).toList();

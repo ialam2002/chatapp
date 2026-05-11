@@ -11,6 +11,9 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Represents an application user account.
+ */
 @Getter
 @Setter
 @Entity

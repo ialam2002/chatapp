@@ -8,8 +8,17 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+/**
+ * Centralizes mapping of common exceptions to HTTP responses.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    /**
+     * Converts validation and business-rule failures into 400 responses.
+     *
+     * @param ex thrown exception
+     * @return error message
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
@@ -17,6 +26,12 @@ public class GlobalExceptionHandler {
         return ex.getMessage();
     }
 
+    /**
+     * Converts missing-resource exceptions into 404 responses.
+     *
+     * @param ex thrown exception
+     * @return error message
+     */
     @ExceptionHandler(NoSuchElementException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ResponseBody

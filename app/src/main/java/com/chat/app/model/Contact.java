@@ -13,6 +13,9 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Stores an accepted contact relation between two users.
+ */
 @Getter
 @Setter
 @Entity
