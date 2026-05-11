@@ -200,6 +200,7 @@
             border: 1px solid #d9e2ec;
             box-shadow: 0 2px 8px rgba(16, 42, 67, 0.07);
             margin-bottom: 0.65rem;
+            animation: bubble-in 0.18s ease;
         }
 
         .message-bubble.mine {
@@ -223,6 +224,66 @@
             background: linear-gradient(135deg, #1f5f71 0%, #25778b 100%);
             border-color: #4fc3d4;
             color: #ecf8fa;
+        }
+
+        .date-divider {
+            position: sticky;
+            top: 0.4rem;
+            z-index: 3;
+            display: flex;
+            justify-content: center;
+            margin: 0.55rem 0 0.8rem;
+            pointer-events: none;
+        }
+
+        .date-divider span {
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            color: #486581;
+            border: 1px solid #cbd2d9;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 999px;
+            padding: 0.15rem 0.7rem;
+            box-shadow: 0 2px 8px rgba(16, 42, 67, 0.1);
+        }
+
+        body.dark-theme .date-divider span {
+            color: #c5d9e8;
+            border-color: #35506f;
+            background: rgba(16, 27, 45, 0.92);
+        }
+
+        .unread-divider {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            margin: 0.7rem 0 0.9rem;
+        }
+
+        .unread-divider::before,
+        .unread-divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #bcccdc;
+        }
+
+        .unread-divider span {
+            font-size: 0.73rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.65px;
+            color: #d9480f;
+        }
+
+        body.dark-theme .unread-divider::before,
+        body.dark-theme .unread-divider::after {
+            background: #486581;
+        }
+
+        body.dark-theme .unread-divider span {
+            color: #f6c26b;
         }
 
         #recentChats .list-group-item,
@@ -396,6 +457,17 @@
                 transform: translateY(0) scale(1);
             }
         }
+
+        @keyframes bubble-in {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -512,6 +584,9 @@
         let activeConversationSubscription = null;
         let reconnectTimer = null;
         let typingTimer = null;
+        let lastRenderedDayKey = null;
+        let pendingUnreadSeparator = false;
+        let unreadSeparatorShown = false;
 
         const alertBox = document.getElementById('alertBox');
         const authCard = document.getElementById('authCard');
@@ -585,6 +660,52 @@
 
         function renderEmptyState(targetEl, text) {
             targetEl.innerHTML = `<div class="empty-state">${text}</div>`;
+        }
+
+        function formatDayKey(dateValue) {
+            const date = new Date(dateValue);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatDayLabel(dateValue) {
+            const date = new Date(dateValue);
+            const today = new Date();
+            const yesterday = new Date();
+            yesterday.setDate(today.getDate() - 1);
+
+            const sameDay = (a, b) =>
+                a.getFullYear() === b.getFullYear() &&
+                a.getMonth() === b.getMonth() &&
+                a.getDate() === b.getDate();
+
+            if (sameDay(date, today)) {
+                return 'Today';
+            }
+            if (sameDay(date, yesterday)) {
+                return 'Yesterday';
+            }
+            return date.toLocaleDateString(undefined, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function appendDateDivider(dateValue) {
+            const divider = document.createElement('div');
+            divider.className = 'date-divider';
+            divider.innerHTML = `<span>${formatDayLabel(dateValue)}</span>`;
+            messages.appendChild(divider);
+        }
+
+        function appendUnreadDivider() {
+            const divider = document.createElement('div');
+            divider.className = 'unread-divider';
+            divider.innerHTML = '<span>New messages</span>';
+            messages.appendChild(divider);
         }
 
         function updateConnectionState(isConnected, textOverride) {
@@ -767,6 +888,8 @@
             activeConversationId = conversationId;
             activeConversationLabel.textContent = `${title} (#${conversationId})`;
             syncMessageControls();
+            pendingUnreadSeparator = true;
+            unreadSeparatorShown = false;
 
             renderMessagesSkeleton();
             const chatHistory = await request(`/api/conversations/${conversationId}/messages?userId=${currentUser.id}`);
@@ -788,10 +911,15 @@
                 `/topic/conversations/${activeConversationId}`,
                 function (frame) {
                     const message = JSON.parse(frame.body);
+                    const isMine = currentUser && message.senderId === currentUser.id;
+                    if (!isMine && pendingUnreadSeparator && !unreadSeparatorShown) {
+                        appendUnreadDivider();
+                        unreadSeparatorShown = true;
+                    }
                     appendMessage(message);
                     loadRecentChats();
                     loadNotifications();
-                    if (!currentUser || message.senderId !== currentUser.id) {
+                    if (!isMine) {
                         showToast('New message', `${message.senderUsername}: ${message.content}`, 'info');
                     }
                 }
@@ -800,6 +928,7 @@
 
         function renderMessages(chatHistory) {
             messages.innerHTML = '';
+            lastRenderedDayKey = null;
             if (!chatHistory.length) {
                 renderEmptyState(messages, 'No messages yet. Start the conversation.');
                 return;
@@ -809,6 +938,12 @@
         }
 
         function appendMessage(message) {
+            const dayKey = message.sentAt ? formatDayKey(message.sentAt) : null;
+            if (dayKey && dayKey !== lastRenderedDayKey) {
+                appendDateDivider(message.sentAt);
+                lastRenderedDayKey = dayKey;
+            }
+
             const messageEl = document.createElement('div');
             const sentTime = message.sentAt ? new Date(message.sentAt).toLocaleTimeString() : '';
             const isMine = currentUser && message.senderId === currentUser.id;
